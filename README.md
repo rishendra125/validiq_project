@@ -4,6 +4,8 @@
 
 Built by [Rishendra Vikram Singh](https://rishendra125.github.io) · Part of the [AI Solutions Portfolio](https://rishendra125.github.io)
 
+**Live demo:** [rishendra125.github.io/validiq_project](https://rishendra125.github.io/validiq_project) · **Repo:** [github.com/rishendra125/validiq_project](https://github.com/rishendra125/validiq_project)
+
 ---
 
 ## The problem it solves
@@ -32,18 +34,28 @@ Total time to complete: under 10 minutes.
 ## Screenshots
 
 **Problem Validation screen (Dimension 1 of 4)**
+Captures interview count, segment coverage, evidence types, and pain signal strength. Scores whether the PM has established that the problem is real, widespread, and worth solving before committing to build.
+
 ![Problem Validation screen showing pre-filled demo inputs including interview count, segments covered, evidence types and pain signal](screenshots/validiq_stage1.png)
 
 **Value Clarity screen (Dimension 2 of 4)**
+Captures the value hypothesis, behavior change identification, financial unlock type, and hypothesis status. Scores whether the PM can connect the feature to a specific, testable, and financially grounded outcome.
+
 ![Value Clarity screen showing value hypothesis, behavior change, hypothesis status and financial unlock type](screenshots/validiq_stage2.png)
 
 **Cost Awareness screen (Dimension 3 of 4)**
+Captures feature type, token cost modeling status, estimated user volume, interaction frequency, and refinement loop cost awareness. Scores whether the PM has modeled what the AI feature will actually cost to run at scale, including agentic loop costs that McKinsey data shows account for 60% of total agentic spend.
+
 ![Cost Awareness screen showing agentic workflow selected, rough estimate cost modeling, and refinement loops not accounted for](screenshots/validiq_stage3.png)
 
 **Stakeholder Readiness screen (Dimension 4 of 4)**
+Captures compliance, risk, and business sponsor engagement status, plus any named regulatory constraints. Scores whether the PM has engaged the right stakeholders before sprint 0, not after. In regulated financial services, an unvalidated stakeholder assumption is as dangerous as an unvalidated customer assumption.
+
 ![Stakeholder Readiness screen showing compliance not engaged, risk in progress, sponsor confirmed, and PSD2 regulatory constraint named](screenshots/validiq_stage4.png)
 
 **Scored output artifact**
+The scored report shows each dimension out of 25 with a colour signal, specific gap statements tied to the PM's actual inputs, an overall score out of 100, a rating label, and a verdict paragraph written for a gate meeting audience.
+
 ![ValidIQ output showing 43 out of 100, Proceed with Conditions rating, four dimension scores, gap statements and assessment verdict](screenshots/validiq_FinatOutput.png)
 
 ---
