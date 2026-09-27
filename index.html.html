@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ValidIQ — Discovery Confidence Scorer</title>
+<style>
+  :root {
+    --navy: #0B1F3A;
+    --navy-mid: #152D50;
+    --navy-light: #1E3D6B;
+    --accent: #2E7CF6;
+    --accent-light: #EBF2FF;
+    --white: #FFFFFF;
+    --off-white: #F7F9FC;
+    --border: #D0DAE8;
+    --text-primary: #0B1F3A;
+    --text-secondary: #4A6080;
+    --text-muted: #7A90A8;
+    --green: #0F7B55;
+    --green-bg: #E8F7F2;
+    --amber: #B45309;
+    --amber-bg: #FEF3C7;
+    --red: #B91C1C;
+    --red-bg: #FEE2E2;
+    --radius: 6px;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; background: var(--off-white); font-family: var(--font); color: var(--text-primary); }
+  
+  /* Key gate */
+  .key-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--off-white); padding: 24px; }
+  .key-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 40px 36px; width: 100%; max-width: 420px; }
+  .key-logo { font-size: 22px; font-weight: 600; color: var(--navy); letter-spacing: -0.4px; margin-bottom: 4px; }
+  .key-logo span { color: var(--accent); }
+  .key-sub { font-size: 12px; color: var(--accent); letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 28px; }
+  .key-label { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; display: block; }
+  .key-input-wrap { position: relative; margin-bottom: 10px; }
+  .key-input-wrap input { width: 100%; padding: 10px 40px 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; color: var(--text-primary); background: var(--white); font-family: var(--font); transition: border-color 0.15s; letter-spacing: 0.05em; }
+  .key-input-wrap input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,124,246,0.08); }
+  .key-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 2px; }
+  .key-trust { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px; }
+  .key-trust a { color: var(--accent); text-decoration: none; }
+  .key-trust a:hover { text-decoration: underline; }
+  .key-btn { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: background 0.15s; }
+  .key-btn:hover { background: #1A6AE8; }
+  .key-error { font-size: 12px; color: var(--red); margin-top: 8px; display: none; }
+  .key-error.visible { display: block; }
+  .key-change { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 0; font-family: var(--font); text-decoration: underline; }
+
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* Header */
+  .header { background: var(--navy); padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 18px; font-weight: 600; color: var(--white); letter-spacing: -0.3px; }
+  .logo span { color: var(--accent); }
+  .header-sub { font-size: 12px; color: #7A9CC0; letter-spacing: 0.3px; text-transform: uppercase; }
+
+  /* Progress bar */
+  .progress-bar { background: var(--navy-mid); padding: 0 40px; }
+  .progress-inner { display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .progress-step { flex: 1; padding: 14px 0 12px; font-size: 11px; color: #7A9CC0; letter-spacing: 0.4px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .progress-step.active { color: var(--white); border-bottom-color: var(--accent); }
+  .progress-step.done { color: #4A8CCC; }
+  .step-num { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .progress-step.active .step-num { background: var(--accent); color: white; }
+  .progress-step.done .step-num { background: #0F7B55; color: white; }
+
+  /* Main content */
+  .main { flex: 1; padding: 48px 40px; max-width: 760px; margin: 0 auto; width: 100%; }
+
+  /* Form screens */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .screen-header { margin-bottom: 32px; }
+  .screen-eyebrow { font-size: 11px; color: var(--accent); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; }
+  .screen-title { font-size: 24px; font-weight: 600; color: var(--navy); letter-spacing: -0.4px; line-height: 1.2; }
+  .screen-desc { font-size: 14px; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+
+  .field-group { margin-bottom: 24px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
+  .field-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+
+  input[type="text"], textarea, select {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; color: var(--text-primary); background: var(--white); font-family: var(--font);
+    transition: border-color 0.15s;
+    appearance: none;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,124,246,0.08); }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A6080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; cursor: pointer; }
+
+  .radio-group, .check-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-opt, .check-opt { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.15s; background: var(--white); }
+  .radio-opt:hover, .check-opt:hover { border-color: var(--accent); background: var(--accent-light); }
+  .radio-opt input, .check-opt input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+  .radio-opt.selected, .check-opt.selected { border-color: var(--accent); background: var(--accent-light); }
+  .opt-label { font-size: 13px; color: var(--text-primary); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Buttons */
+  .btn-row { display: flex; justify-content: flex-end; margin-top: 40px; gap: 12px; }
+  .btn { padding: 11px 24px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: var(--font); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #1A6AE8; }
+  .btn-secondary { background: var(--white); color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--off-white); }
+
+  /* Loading */
+  .loading { display: none; padding: 80px 0; text-align: center; }
+  .loading.active { display: block; }
+  .loading-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 20px; }
+  .loading-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite; }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+  .loading-text { font-size: 15px; color: var(--text-secondary); }
+
+  /* Output */
+  .output { display: none; }
+  .output.active { display: block; }
+
+  .output-header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .output-meta { font-size: 11px; color: var(--text-muted); letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 10px; }
+  .overall-row { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .score-big { font-size: 48px; font-weight: 600; color: var(--navy); letter-spacing: -1px; line-height: 1; }
+  .score-denom { font-size: 20px; color: var(--text-muted); }
+  .rating-badge { padding: 6px 14px; border-radius: 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
+  .rating-green { background: var(--green-bg); color: var(--green); }
+  .rating-amber { background: var(--amber-bg); color: var(--amber); }
+  .rating-red { background: var(--red-bg); color: var(--red); }
+
+  .dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .dim-card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .dim-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
+  .dim-score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .dim-score { font-size: 26px; font-weight: 600; color: var(--navy); }
+  .dim-denom { font-size: 13px; color: var(--text-muted); }
+  .dim-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+  .dim-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+  .fill-green { background: var(--green); }
+  .fill-amber { background: #F59E0B; }
+  .fill-red { background: #EF4444; }
+  .gap-list { list-style: none; }
+  .gap-list li { font-size: 12px; color: var(--text-secondary); padding: 6px 0 6px 16px; position: relative; border-top: 1px solid var(--off-white); line-height: 1.5; }
+  .gap-list li:first-child { border-top: none; }
+  .gap-list li::before { content: ''; position: absolute; left: 0; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .gap-list li.critical::before { background: #EF4444; }
+
+  .verdict-block { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-top: 8px; }
+  .verdict-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
+  .verdict-text { font-size: 14px; color: var(--text-primary); line-height: 1.7; }
+
+  .output-actions { margin-top: 28px; display: flex; gap: 12px; }
+
+  /* Footer */
+  .footer { padding: 24px 40px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--text-muted); }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* Error state */
+  .error-msg { background: var(--red-bg); border: 1px solid #FCA5A5; border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: var(--red); margin-top: 16px; display: none; }
+  .error-msg.visible { display: block; }
+
+  /* Tooltips */
+  .tip-wrap { position: relative; display: inline-flex; align-items: center; margin-left: 6px; vertical-align: middle; }
+  .tip-icon { width: 15px; height: 15px; border-radius: 50%; background: var(--border); color: var(--text-muted); font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border: none; font-family: var(--font); flex-shrink: 0; }
+  .tip-icon:hover { background: var(--accent); color: white; }
+  .tip-box { display: none; position: absolute; left: 22px; top: -4px; width: 240px; background: var(--navy); color: #CBD8E8; font-size: 12px; line-height: 1.5; padding: 10px 12px; border-radius: var(--radius); z-index: 100; pointer-events: none; }
+  .tip-wrap:hover .tip-box, .tip-wrap.open .tip-box { display: block; }
+  @media (max-width: 640px) { .tip-box { left: auto; right: 0; top: 22px; } }
+
+  /* Demo banner */
+  .demo-banner { background: #FEF3C7; border-bottom: 1px solid #FCD34D; padding: 10px 40px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .demo-banner-text { font-size: 13px; color: #92400E; font-weight: 500; }
+  .demo-banner-btn { padding: 6px 14px; background: var(--navy); color: white; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); white-space: nowrap; }
+  .demo-banner-btn:hover { background: var(--navy-light); }
+
+  /* Demo button on key gate */
+  .key-divider { text-align: center; font-size: 12px; color: var(--text-muted); margin: 14px 0; }
+  .key-demo-btn { width: 100%; padding: 11px; background: var(--white); color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+  .key-demo-btn:hover { background: var(--off-white); border-color: var(--accent); color: var(--accent); }
+    .header { padding: 16px 20px; }
+    .progress-bar { padding: 0 20px; }
+    .main { padding: 32px 20px; }
+    .two-col { grid-template-columns: 1fr; }
+    .dim-grid { grid-template-columns: 1fr; }
+    .footer { padding: 20px; }
+    .progress-step { font-size: 10px; }
+    .step-num { width: 18px; height: 18px; font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+<!-- Key Gate -->
+<div id="keyGate" class="key-gate">
+  <div class="key-card">
+    <div class="key-logo">Valid<span>IQ</span></div>
+    <div class="key-sub">Discovery Confidence Scorer</div>
+    <label class="key-label" for="apiKeyInput">Your Anthropic API key</label>
+    <div class="key-input-wrap">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+      <button class="key-toggle" onclick="toggleKeyVisibility()" type="button" id="keyToggle">Show</button>
+    </div>
+    <div class="key-error" id="keyError">Please enter a valid Anthropic API key starting with sk-ant-</div>
+    <p class="key-trust">Your key is used only in your browser and never sent to any server other than api.anthropic.com directly. Get a free key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+    <button class="key-btn" onclick="startWithKey()">Start using ValidIQ &rarr;</button>
+    <div class="key-divider">or</div>
+    <button class="key-demo-btn" onclick="startDemo()">Try a live demo first</button>
+  </div>
+</div>
+
+<div class="app" id="mainApp" style="display:none;">
+
+  <header class="header">
+    <div>
+      <div class="logo">Valid<span>IQ</span></div>
+      <div class="header-sub">Discovery Confidence Scorer</div>
+    </div>
+    <button class="key-change" onclick="changeKey()" style="color:#7A9CC0;" id="headerKeyBtn">Change API key</button>
+  </header>
+
+  <div id="demoBanner" class="demo-banner" style="display:none;">
+    <span class="demo-banner-text">You are viewing a pre-scored demo. Enter your API key to score your own discovery package.</span>
+    <button class="demo-banner-btn" onclick="exitDemo()">Use my own key</button>
+  </div>
+
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-inner">
+      <div class="progress-step active" id="step1">
+        <div class="step-num">1</div>Problem Validation
+      </div>
+      <div class="progress-step" id="step2">
+        <div class="step-num">2</div>Value Clarity
+      </div>
+      <div class="progress-step" id="step3">
+        <div class="step-num">3</div>Cost Awareness
+      </div>
+      <div class="progress-step" id="step4">
+        <div class="step-num">4</div>Stakeholder Readiness
+      </div>
+    </div>
+  </div>
+
+  <main class="main">
+
+    <!-- Screen 1: Problem Validation -->
+    <div class="screen active" id="screen1">
+      <div class="screen-header">
+        <div class="screen-eyebrow">Dimension 1 of 4</div>
+        <div class="screen-title">Problem Validation</div>
+        <div class="screen-desc">How well have you established that the problem is real, widespread, and worth solving?</div>
+      </div>
+
+      <div class="field-group">
+        <label>Describe the problem you are solving <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Be specific about who experiences the problem, what breaks today, and what it costs them. Vague problem statements like "customers want better service" score low.</span></span></label>
+        <div class="field-hint">One or two sentences. What breaks today, for whom, and at what cost?</div>
+        <textarea id="problem_statement" rows="3" placeholder="Operations teams spend 4+ hours daily manually reviewing flagged transactions, leading to delayed decisioning and escalation backlogs."></textarea>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label>Customer interviews conducted <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Count only interviews with real users or stakeholders, not internal team discussions. 4+ interviews is the minimum for a defensible discovery package at a stage gate.</span></span></label>
+          <div class="radio-group" id="interviews_conducted">
+            <label class="radio-opt"><input type="radio" name="interviews" value="0"> <span class="opt-label">None yet</span></label>
+            <label class="radio-opt"><input type="radio" name="interviews" value="1-3"> <span class="opt-label">1 to 3 interviews</span></label>
+            <label class="radio-opt"><input type="radio" name="interviews" value="4-7"> <span class="opt-label">4 to 7 interviews</span></label>
+            <label class="radio-opt"><input type="radio" name="interviews" value="8+"> <span class="opt-label">8 or more</span></label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Pain signal strength <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Validated means you have data quantifying the problem: ticket volumes, time-on-task logs, error rates. Anecdotal means a few people confirmed it in conversation. Assumed means you believe it exists but have not yet confirmed it.</span></span></label>
+          <div class="radio-group" id="pain_signal">
+            <label class="radio-opt"><input type="radio" name="pain" value="assumed"> <span class="opt-label">Assumed — we believe it exists</span></label>
+            <label class="radio-opt"><input type="radio" name="pain" value="anecdotal"> <span class="opt-label">Anecdotal — a few people confirmed it</span></label>
+            <label class="radio-opt"><input type="radio" name="pain" value="validated"> <span class="opt-label">Validated — backed by data</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Segments covered in interviews <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Target segment means the people who directly experience the problem your feature solves. Interviewing only adjacent teams like internal ops or leadership does not substitute for target segment coverage.</span></span></label>
+        <div class="field-hint">Select all that apply</div>
+        <div class="check-group" id="segments_covered">
+          <label class="check-opt"><input type="checkbox" value="target_segment"> <span class="opt-label">Target segment — the people most affected by the problem</span></label>
+          <label class="check-opt"><input type="checkbox" value="internal_ops"> <span class="opt-label">Internal ops or adjacent teams</span></label>
+          <label class="check-opt"><input type="checkbox" value="business_sponsors"> <span class="opt-label">Business sponsors or leadership</span></label>
+          <label class="check-opt"><input type="checkbox" value="compliance_risk"> <span class="opt-label">Compliance or risk stakeholders</span></label>
+          <label class="check-opt"><input type="checkbox" value="none"> <span class="opt-label">No interviews conducted yet</span></label>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Evidence types used <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Structured evidence means data sources beyond interviews: support tickets, NPS scores, transaction logs, behavioral analytics. Two or more structured types signals a serious discovery effort.</span></span></label>
+        <div class="field-hint">Select all that apply</div>
+        <div class="check-group" id="evidence_types">
+          <label class="check-opt"><input type="checkbox" value="user_interviews"> <span class="opt-label">User interviews</span></label>
+          <label class="check-opt"><input type="checkbox" value="support_tickets"> <span class="opt-label">Support tickets or complaint data</span></label>
+          <label class="check-opt"><input type="checkbox" value="nps_csat"> <span class="opt-label">NPS or CSAT data</span></label>
+          <label class="check-opt"><input type="checkbox" value="transaction_data"> <span class="opt-label">Transaction or behavioral data</span></label>
+          <label class="check-opt"><input type="checkbox" value="none"> <span class="opt-label">No structured evidence yet</span></label>
+        </div>
+      </div>
+
+      <div class="error-msg" id="err1">Please complete all fields before continuing.</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="nextScreen(1)">Continue to Value Clarity</button>
+      </div>
+    </div>
+
+    <!-- Screen 2: Value Clarity -->
+    <div class="screen" id="screen2">
+      <div class="screen-header">
+        <div class="screen-eyebrow">Dimension 2 of 4</div>
+        <div class="screen-title">Value Clarity</div>
+        <div class="screen-desc">Is your value hypothesis explicit, testable, and connected to a financial outcome?</div>
+      </div>
+
+      <div class="field-group">
+        <label>State your value hypothesis <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">A strong hypothesis names a specific behavior change and connects it to a measurable financial outcome. "AI will improve efficiency" is not a hypothesis. "Automating X will reduce analyst time-on-task by Y%, unlocking Z" is.</span></span></label>
+        <div class="field-hint">What does this feature change, and what does that change unlock?</div>
+        <textarea id="value_hypothesis" rows="3" placeholder="Automating flagged transaction review will reduce analyst time-on-task by 60%, cutting decisioning delays from 4 hours to under 30 minutes and reducing false-positive escalations."></textarea>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label>Behavior change identified <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">What will users start doing, stop doing, or do differently because of this feature? A clearly defined behavior change means you can measure whether the feature is working after launch.</span></span></label>
+          <div class="radio-group" id="behavior_change">
+            <label class="radio-opt"><input type="radio" name="behavior" value="yes"> <span class="opt-label">Yes — clearly defined</span></label>
+            <label class="radio-opt"><input type="radio" name="behavior" value="partially"> <span class="opt-label">Partially — directional but not specific</span></label>
+            <label class="radio-opt"><input type="radio" name="behavior" value="no"> <span class="opt-label">Not yet defined</span></label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Hypothesis status <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Evidenced means you have data or research confirming the value claim. Partially evidenced means you have proxies or directional signals. Assumed means the hypothesis is logical but untested.</span></span></label>
+          <div class="radio-group" id="hypothesis_status">
+            <label class="radio-opt"><input type="radio" name="hyp" value="assumed"> <span class="opt-label">Assumed — no external validation</span></label>
+            <label class="radio-opt"><input type="radio" name="hyp" value="partially_evidenced"> <span class="opt-label">Partially evidenced</span></label>
+            <label class="radio-opt"><input type="radio" name="hyp" value="evidenced"> <span class="opt-label">Evidenced — validated with data or research</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Primary financial unlock type <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Choose the category that best describes how this feature creates financial value. If you cannot identify which category applies, that is itself a signal the value hypothesis needs more work.</span></span></label>
+        <select id="financial_unlock">
+          <option value="">Select the closest match</option>
+          <option value="cost_reduction">Cost reduction — lower operating costs</option>
+          <option value="revenue_increase">Revenue increase — new or expanded revenue</option>
+          <option value="risk_reduction">Risk reduction — lower regulatory or credit risk</option>
+          <option value="operational_efficiency">Operational efficiency — same output, fewer resources</option>
+          <option value="not_yet_defined">Not yet defined</option>
+        </select>
+      </div>
+
+      <div class="error-msg" id="err2">Please complete all fields before continuing.</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevScreen(2)">Back</button>
+        <button class="btn btn-primary" onclick="nextScreen(2)">Continue to Cost Awareness</button>
+      </div>
+    </div>
+
+    <!-- Screen 3: Cost Awareness -->
+    <div class="screen" id="screen3">
+      <div class="screen-header">
+        <div class="screen-eyebrow">Dimension 3 of 4</div>
+        <div class="screen-title">Cost Awareness</div>
+        <div class="screen-desc">Have you modeled what this AI feature will cost to run at scale, including agentic loop costs?</div>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label>Feature type <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">A simple AI feature makes one inference per user request. An agentic workflow makes multiple calls, uses tools, and loops until a condition is met. Agentic workflows carry significantly higher and less predictable token costs.</span></span></label>
+          <div class="radio-group" id="feature_type">
+            <label class="radio-opt"><input type="radio" name="feature" value="simple_ai_feature"> <span class="opt-label">Simple AI feature — single inference per request</span></label>
+            <label class="radio-opt"><input type="radio" name="feature" value="agentic_workflow"> <span class="opt-label">Agentic workflow — multi-step, tool calls, loops</span></label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Token cost modeling <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Cost modeling means estimating tokens per request multiplied by expected volume and frequency to produce a monthly cost envelope. A rough estimate is better than nothing but a full model includes worst-case scenarios.</span></span></label>
+          <div class="radio-group" id="token_cost_modeling">
+            <label class="radio-opt"><input type="radio" name="cost_model" value="done"> <span class="opt-label">Done — full cost model built</span></label>
+            <label class="radio-opt"><input type="radio" name="cost_model" value="rough_estimate"> <span class="opt-label">Rough estimate only</span></label>
+            <label class="radio-opt"><input type="radio" name="cost_model" value="no"> <span class="opt-label">Not done yet</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label>Estimated monthly active users at scale <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Use your target steady-state volume, not current pilot numbers. This is the scale at which the cost model needs to hold for the ROI case to be defensible.</span></span></label>
+          <select id="mau_estimate">
+            <option value="">Select a range</option>
+            <option value="under_1k">Under 1,000</option>
+            <option value="1k-10k">1,000 to 10,000</option>
+            <option value="10k-100k">10,000 to 100,000</option>
+            <option value="100k+">More than 100,000</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Interaction frequency per user <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Higher frequency multiplies token cost directly. A feature used multiple times daily at high volume needs a cost model that explicitly accounts for this, not a back-of-envelope estimate.</span></span></label>
+          <select id="interaction_frequency">
+            <option value="">Select frequency</option>
+            <option value="one_time">One-time or occasional</option>
+            <option value="daily">Daily</option>
+            <option value="multiple_times_daily">Multiple times per day</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Refinement loop costs accounted for <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Agentic workflows re-call the model until an output condition is met. McKinsey data shows these loops account for 60% of total agentic token spend on average. If you have not modeled loop iterations, your cost estimate is likely less than half the real number.</span></span></label>
+        <div class="field-hint">Agentic workflows re-process outputs until a condition is met. These loops can represent 60% of total token cost.</div>
+        <div class="radio-group" id="refinement_loops">
+          <label class="radio-opt"><input type="radio" name="loops" value="accounted_for"> <span class="opt-label">Yes — loop costs are included in my estimate</span></label>
+          <label class="radio-opt"><input type="radio" name="loops" value="not_accounted_for"> <span class="opt-label">Not accounted for</span></label>
+          <label class="radio-opt"><input type="radio" name="loops" value="not_applicable"> <span class="opt-label">Not applicable — this is a simple AI feature</span></label>
+        </div>
+      </div>
+
+      <div class="error-msg" id="err3">Please complete all fields before continuing.</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevScreen(3)">Back</button>
+        <button class="btn btn-primary" onclick="nextScreen(3)">Continue to Stakeholder Readiness</button>
+      </div>
+    </div>
+
+    <!-- Screen 4: Stakeholder Readiness -->
+    <div class="screen" id="screen4">
+      <div class="screen-header">
+        <div class="screen-eyebrow">Dimension 4 of 4</div>
+        <div class="screen-title">Stakeholder Readiness</div>
+        <div class="screen-desc">In regulated financial services, unvalidated stakeholder assumptions are as dangerous as unvalidated customer assumptions.</div>
+      </div>
+
+      <div class="field-group">
+        <label>Stakeholder engagement status <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">In financial services, compliance and risk engagement is not optional. "In progress" means active dialogue has started. "Confirmed" means you have documented alignment. "Not engaged" means you have not started the conversation.</span></span></label>
+        <div class="field-hint">For each stakeholder group, select the current engagement level</div>
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <td style="font-size:12px;color:var(--text-muted);padding:8px 0;width:180px;"></td>
+              <td style="font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Not engaged</td>
+              <td style="font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">In progress</td>
+              <td style="font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Confirmed</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border);">
+              <td style="font-size:13px;font-weight:500;padding:12px 0;">Compliance</td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="compliance" value="no" style="accent-color:var(--accent);"></td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="compliance" value="in_progress" style="accent-color:var(--accent);"></td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="compliance" value="yes" style="accent-color:var(--accent);"></td>
+            </tr>
+            <tr style="border-top:1px solid var(--border);">
+              <td style="font-size:13px;font-weight:500;padding:12px 0;">Risk team</td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="risk" value="no" style="accent-color:var(--accent);"></td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="risk" value="in_progress" style="accent-color:var(--accent);"></td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="risk" value="yes" style="accent-color:var(--accent);"></td>
+            </tr>
+            <tr style="border-top:1px solid var(--border);">
+              <td style="font-size:13px;font-weight:500;padding:12px 0;">Business sponsor</td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="sponsor" value="no" style="accent-color:var(--accent);"></td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="sponsor" value="in_progress" style="accent-color:var(--accent);"></td>
+              <td style="text-align:center;padding:12px 8px;"><input type="radio" name="sponsor" value="yes" style="accent-color:var(--accent);"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="field-group">
+        <label>Regulatory constraints flagged <span class="tip-wrap"><button class="tip-icon" onclick="this.closest('.tip-wrap').classList.toggle('open')">?</button><span class="tip-box">Common constraints in financial services include PSD2, GDPR, SR 11-7 model risk guidance, and FCA rules on automated decisioning. Flagging a known constraint and naming it specifically scores higher than flagging it without detail.</span></span></label>
+        <div class="radio-group" id="reg_flagged">
+          <label class="radio-opt"><input type="radio" name="reg" value="no"> <span class="opt-label">No known regulatory constraints for this feature</span></label>
+          <label class="radio-opt"><input type="radio" name="reg" value="yes"> <span class="opt-label">Yes — specific constraints identified</span></label>
+        </div>
+      </div>
+
+      <div class="field-group" id="reg_detail_group" style="display:none;">
+        <label>Name the specific regulatory constraint</label>
+        <div class="field-hint">E.g. PSD2 real-time reporting obligations, GDPR data minimisation, SR 11-7 model risk guidance</div>
+        <input type="text" id="reg_detail" placeholder="Describe the specific regulation or obligation">
+      </div>
+
+      <div class="error-msg" id="err4">Please complete all fields before submitting.</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevScreen(4)">Back</button>
+        <button class="btn btn-primary" id="submitBtn" onclick="submitForm()">Score my discovery package</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" id="loadingScreen">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <div class="loading-text">ValidIQ is evaluating your discovery package</div>
+    </div>
+
+    <!-- Output -->
+    <div class="output" id="outputScreen">
+      <div class="output-header">
+        <div class="output-meta">ValidIQ Assessment Report</div>
+        <div class="overall-row">
+          <div><span class="score-big" id="overallScore">--</span><span class="score-denom"> / 100</span></div>
+          <div class="rating-badge" id="ratingBadge">--</div>
+        </div>
+      </div>
+
+      <div class="dim-grid" id="dimGrid"></div>
+
+      <div class="verdict-block">
+        <div class="verdict-label">Assessment verdict</div>
+        <div class="verdict-text" id="verdictText"></div>
+      </div>
+
+      <div class="output-actions">
+        <button class="btn btn-secondary" onclick="resetTool()">Start a new assessment</button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    Built by <strong>Rishendra Vikram Singh</strong> &middot; Part of the AI Solutions Portfolio at <a href="https://rishendra125.github.io" target="_blank">rishendra125.github.io</a>
+  </footer>
+
+</div>
+
+<script>
+let isDemoMode = false;
+
+const DEMO_RESULT = {
+  dimension_scores: {
+    problem_validation: {
+      score: 10,
+      gap_statements: [
+        "Only 1-3 interviews conducted, none from the target segment most affected by transaction review delays. Interviews from compliance analysts or front-line ops reviewers in the impacted workflow are required to close this gap.",
+        "Pain signal is anecdotal. A single structured evidence type does not establish problem severity at scale. Transaction data showing review queue volume, escalation rates, or analyst time-on-task would elevate this to validated."
+      ]
+    },
+    value_clarity: {
+      score: 13,
+      gap_statements: [
+        "Value hypothesis is assumed, not evidenced. No baseline exists for analyst time spent or false positive rates, which means the efficiency claim has no anchor. One round of measurement against current-state ops data would shift this to partially evidenced."
+      ]
+    },
+    cost_awareness: {
+      score: 12,
+      gap_statements: [
+        "Agentic workflow operating at high volume and frequency, but refinement loop costs have not been accounted for. At 10k-100k MAU with multiple daily interactions, unmodeled loop costs represent a material budget risk. A rough cost envelope including average loop iterations per transaction must be built before sprint 0."
+      ]
+    },
+    stakeholder_readiness: {
+      score: 8,
+      gap_statements: [
+        "PSD2 real-time reporting obligations are correctly identified as a constraint, but compliance has not been engaged. This is a critical contradiction. An agentic decisioning feature touching flagged transactions under PSD2 cannot proceed to sprint 0 without a compliance sign-off or at minimum a documented engagement in progress.",
+        "Until compliance is engaged, stakeholder readiness is capped regardless of risk and sponsor alignment."
+      ]
+    }
+  },
+  overall_score: 43,
+  overall_rating: "Proceed with Conditions",
+  verdict: "Your two hardest blockers are Stakeholder Readiness and Cost Awareness, and both are structural caps, not point-shaving. On Stakeholder Readiness, you flagged a real regulatory constraint (PSD2 real-time reporting on automated decisioning) but compliance is not engaged. That combination hard-caps this dimension at 8 no matter how strong your sponsor alignment or regulatory detail quality is. Closing this requires getting compliance formally engaged, not just risk team in progress. On Cost Awareness, you are building an agentic workflow at 10k-100k MAU with multiple-times-daily usage but have not accounted for refinement loop costs. That caps you at 12 even though your token modeling and volume components would otherwise support close to full marks. Closing this requires modeling retry and refinement loop token spend explicitly, not rough estimates. Fix both and you add roughly 20-25 points back into the overall score, which would move you from Proceed with Conditions into Conditionally Ready territory. Until compliance is engaged and refinement costs are modeled, this package is not gate-ready on the two dimensions that matter most for a regulated, high-volume agentic feature."
+};
+
+function fillDemoData() {
+  // Screen 1
+  document.getElementById('problem_statement').value = 'Operations teams spend 4+ hours daily manually reviewing flagged transactions, leading to delayed decisioning and escalation backlogs.';
+  document.querySelector('input[name="interviews"][value="1-3"]').checked = true;
+  document.querySelector('input[name="pain"][value="anecdotal"]').checked = true;
+  document.querySelector('#segments_covered input[value="internal_ops"]').checked = true;
+  document.querySelector('#evidence_types input[value="user_interviews"]').checked = true;
+
+  // Screen 2
+  document.getElementById('value_hypothesis').value = 'Automating the flagged transaction review queue will reduce analyst time-on-task and cut false-positive escalations.';
+  document.querySelector('input[name="behavior"][value="partially"]').checked = true;
+  document.querySelector('input[name="hyp"][value="assumed"]').checked = true;
+  document.getElementById('financial_unlock').value = 'operational_efficiency';
+
+  // Screen 3
+  document.querySelector('input[name="feature"][value="agentic_workflow"]').checked = true;
+  document.getElementById('mau_estimate').value = '10k-100k';
+  document.getElementById('interaction_frequency').value = 'multiple_times_daily';
+  document.querySelector('input[name="cost_model"][value="rough_estimate"]').checked = true;
+  document.querySelector('input[name="loops"][value="not_accounted_for"]').checked = true;
+
+  // Screen 4
+  document.querySelector('input[name="compliance"][value="no"]').checked = true;
+  document.querySelector('input[name="risk"][value="in_progress"]').checked = true;
+  document.querySelector('input[name="sponsor"][value="yes"]').checked = true;
+  document.querySelector('input[name="reg"][value="yes"]').checked = true;
+  document.getElementById('reg_detail_group').style.display = 'block';
+  document.getElementById('reg_detail').value = 'PSD2 real-time reporting obligations apply to automated decisioning on flagged transactions.';
+}
+
+function startDemo() {
+  isDemoMode = true;
+  document.getElementById('keyGate').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  document.getElementById('demoBanner').style.display = 'flex';
+  document.getElementById('headerKeyBtn').style.display = 'none';
+
+  // Fill all fields with Scenario A data
+  fillDemoData();
+
+  // Reset to screen 1 so visitor walks through the tour
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.progress-step').forEach(s => s.classList.remove('active', 'done'));
+  document.getElementById('screen1').classList.add('active');
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('progressBar').style.display = 'block';
+  currentScreen = 1;
+  // Update submit button label for demo
+  document.getElementById('submitBtn').textContent = 'See demo results';
+  window._demoNextOverride = true;
+}
+
+function exitDemo() {
+  isDemoMode = false;
+  document.getElementById('demoBanner').style.display = 'none';
+  document.getElementById('headerKeyBtn').style.display = 'block';
+  document.getElementById('outputScreen').classList.remove('active');
+  document.getElementById('progressBar').style.display = 'none';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.progress-step').forEach(s => s.classList.remove('active', 'done'));
+  currentScreen = 1;
+  document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(i => i.checked = false);
+  document.querySelectorAll('textarea, input[type="text"]').forEach(i => i.value = '');
+  document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+  document.getElementById('reg_detail_group').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('keyGate').style.display = 'flex';
+  document.getElementById('submitBtn').textContent = 'Score my discovery package';
+}
+
+// If key already stored, skip gate
+(function() {
+  const stored = localStorage.getItem('validiq_api_key');
+  if (stored && stored.startsWith('sk-ant-')) {
+    document.getElementById('keyGate').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+  }
+})();
+
+// Show/hide regulatory detail field
+document.querySelectorAll('input[name="reg"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('reg_detail_group').style.display =
+      r.value === 'yes' && r.checked ? 'block' : 'none';
+  });
+});
+
+function getRadioValue(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : null;
+}
+
+function getCheckboxValues(groupId) {
+  const vals = [];
+  document.querySelectorAll(`#${groupId} input[type="checkbox"]:checked`).forEach(cb => vals.push(cb.value));
+  return vals;
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg || 'Please complete all fields before continuing.';
+  el.classList.add('visible');
+}
+
+function hideError(id) {
+  document.getElementById(id).classList.remove('visible');
+}
+
+function validateScreen(n) {
+  if (n === 1) {
+    const ps = document.getElementById('problem_statement').value.trim();
+    const iv = getRadioValue('interviews');
+    const pain = getRadioValue('pain');
+    const segs = getCheckboxValues('segments_covered');
+    const evid = getCheckboxValues('evidence_types');
+    if (!ps || !iv || !pain || !segs.length || !evid.length) { showError('err1'); return false; }
+    hideError('err1'); return true;
+  }
+  if (n === 2) {
+    const vh = document.getElementById('value_hypothesis').value.trim();
+    const bc = getRadioValue('behavior');
+    const hs = getRadioValue('hyp');
+    const fu = document.getElementById('financial_unlock').value;
+    if (!vh || !bc || !hs || !fu) { showError('err2'); return false; }
+    hideError('err2'); return true;
+  }
+  if (n === 3) {
+    const ft = getRadioValue('feature');
+    const cm = getRadioValue('cost_model');
+    const mau = document.getElementById('mau_estimate').value;
+    const freq = document.getElementById('interaction_frequency').value;
+    const rl = getRadioValue('loops');
+    if (!ft || !cm || !mau || !freq || !rl) { showError('err3'); return false; }
+    hideError('err3'); return true;
+  }
+  if (n === 4) {
+    const comp = getRadioValue('compliance');
+    const risk = getRadioValue('risk');
+    const sponsor = getRadioValue('sponsor');
+    const reg = getRadioValue('reg');
+    if (!comp || !risk || !sponsor || !reg) { showError('err4'); return false; }
+    if (reg === 'yes' && !document.getElementById('reg_detail').value.trim()) {
+      showError('err4', 'Please name the specific regulatory constraint.'); return false;
+    }
+    hideError('err4'); return true;
+  }
+  return true;
+}
+
+function nextScreen(current) {
+  if (!isDemoMode && !validateScreen(current)) return;
+  document.getElementById(`screen${current}`).classList.remove('active');
+  document.getElementById(`step${current}`).classList.remove('active');
+  document.getElementById(`step${current}`).classList.add('done');
+  currentScreen = current + 1;
+  if (currentScreen <= 4) {
+    document.getElementById(`screen${currentScreen}`).classList.add('active');
+    document.getElementById(`step${currentScreen}`).classList.add('active');
+  }
+}
+
+function prevScreen(current) {
+  document.getElementById(`screen${current}`).classList.remove('active');
+  document.getElementById(`step${current}`).classList.remove('active');
+  currentScreen = current - 1;
+  document.getElementById(`screen${currentScreen}`).classList.add('active');
+  document.getElementById(`step${currentScreen}`).classList.remove('done');
+  document.getElementById(`step${currentScreen}`).classList.add('active');
+}
+
+function collectFormData() {
+  const segs = getCheckboxValues('segments_covered');
+  const evid = getCheckboxValues('evidence_types');
+  return {
+    problem_validation: {
+      problem_statement: document.getElementById('problem_statement').value.trim(),
+      interviews_conducted: getRadioValue('interviews'),
+      segments_covered: segs,
+      evidence_types: evid,
+      pain_signal_strength: getRadioValue('pain')
+    },
+    value_clarity: {
+      value_hypothesis: document.getElementById('value_hypothesis').value.trim(),
+      behavior_change_identified: getRadioValue('behavior'),
+      financial_unlock_type: document.getElementById('financial_unlock').value,
+      hypothesis_status: getRadioValue('hyp')
+    },
+    cost_awareness: {
+      feature_type: getRadioValue('feature'),
+      estimated_mau: document.getElementById('mau_estimate').value,
+      interaction_frequency: document.getElementById('interaction_frequency').value,
+      token_cost_modeling_done: getRadioValue('cost_model'),
+      refinement_loop_costs_accounted: getRadioValue('loops')
+    },
+    stakeholder_readiness: {
+      compliance_engaged: getRadioValue('compliance'),
+      risk_team_engaged: getRadioValue('risk'),
+      business_sponsor_aligned: getRadioValue('sponsor'),
+      regulatory_constraints_flagged: getRadioValue('reg'),
+      regulatory_constraint_detail: document.getElementById('reg_detail').value.trim() || null
+    }
+  };
+}
+
+const SYSTEM_PROMPT = `You are ValidIQ, an AI-powered Discovery-to-ROI Confidence Scorer built for enterprise financial services Product Managers at companies like JP Morgan, Mastercard, AMEX, and Visa. Your job is to evaluate a PM's discovery package before they commit to build and return a scored artifact they can take into a sprint 0 gate or stage gate review.
+
+You receive a structured JSON input. Score each dimension using the exact rubric below. Apply all caps and gates in sequence before stacking points. Return only a valid JSON object matching the output schema. No preamble, no explanation outside the JSON.
+
+SCORING RUBRIC
+
+Problem Validation (max 25):
+- Interviews: 0=0pts, 1-3=4pts, 4-7=7pts, 8+=10pts. If interviews=0, dimension score cannot exceed 5 regardless of other inputs.
+- Segment coverage: target_segment in segments_covered=7pts, other segments only (no target_segment)=2pts + set critical_gap on segment, none or empty=0pts.
+- Evidence type: two or more structured types (not counting "none")=4pts, one structured type=2pts, none or only "none"=0pts.
+- Pain signal: validated=4pts, anecdotal=2pts, assumed=0pts.
+- Sum the four components. Cap at 25.
+
+Value Clarity (max 25):
+- Check financial_unlock_type first. If "not_yet_defined", cap entire dimension at 10 before any calculation.
+- Hypothesis status: evidenced=12pts, partially_evidenced=7pts, assumed=3pts.
+- Behavior change: yes=7pts, partially=4pts, no=0pts.
+- Financial unlock: any defined type=6pts, not_yet_defined=0pts.
+- Sum the three components. Apply cap if triggered. Cap at 25.
+
+Cost Awareness (max 25):
+- Check feature_type and token_cost_modeling_done together first. If agentic_workflow AND token_cost_modeling_done=no, hard cap at 8.
+- If agentic_workflow AND refinement_loop_costs_accounted=not_accounted_for, cap at 12 (superseded by the harder cap above if both apply).
+- Token cost modeling: done=10pts, rough_estimate=5pts, no=0pts.
+- Refinement loop costs: accounted_for=8pts, not_applicable=6pts, not_accounted_for=0pts.
+- Volume and frequency: (10k-100k or 100k+) AND multiple_times_daily=7pts, any combination with 1k-10k or above users=4pts, under_1k OR one_time=2pts.
+- Sum the three components. Apply caps in sequence. Cap at 25.
+
+Stakeholder Readiness (max 25):
+- Check regulatory_constraints_flagged and compliance_engaged together first. If regulatory_constraints_flagged=yes AND compliance_engaged=no, hard cap at 8.
+- Compliance engaged: yes=5pts, in_progress=3pts, no=0pts.
+- Risk team engaged: yes=5pts, in_progress=3pts, no=0pts.
+- Business sponsor aligned: yes=5pts, in_progress=3pts, no=0pts.
+- Regulatory: not_flagged (regulatory_constraints_flagged=no)=5pts, flagged AND regulatory_constraint_detail is non-empty=10pts, flagged AND no detail=3pts.
+- Sum the four components. Apply cap if triggered. Cap at 25.
+
+OVERALL SCORE AND RATING
+- overall_score = sum of four dimension scores.
+- 0-40: "Return to Discovery"
+- 41-60: "Proceed with Conditions"
+- 61-80: "Conditionally Ready"
+- 81-100: "Ready to Proceed"
+
+GAP STATEMENTS
+For each dimension, generate gap_statements as an array of specific, input-referenced strings. Each gap statement names exactly what is missing and what evidence would close it. Maximum three gap statements per dimension. If a dimension has no significant gaps, return an empty array or a single positive confirmation.
+
+VERDICT
+One paragraph, written directly to the PM. Name the two most critical gaps by dimension. State specifically what closing each gap requires. State what the combined effect of closing both would unlock for their readiness rating. Tone: senior PM who has reviewed a hundred discovery packages. No hedging. No encouragement that is not earned. No generic advice. Be direct and specific to the inputs provided.
+
+OUTPUT SCHEMA - Return ONLY this JSON object, nothing else, no markdown:
+{
+  "dimension_scores": {
+    "problem_validation": { "score": integer, "gap_statements": [string] },
+    "value_clarity": { "score": integer, "gap_statements": [string] },
+    "cost_awareness": { "score": integer, "gap_statements": [string] },
+    "stakeholder_readiness": { "score": integer, "gap_statements": [string] }
+  },
+  "overall_score": integer,
+  "overall_rating": string,
+  "verdict": string
+}`;
+
+function toggleKeyVisibility() {
+  const input = document.getElementById('apiKeyInput');
+  const btn = document.getElementById('keyToggle');
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+  else { input.type = 'password'; btn.textContent = 'Show'; }
+}
+
+function startWithKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const err = document.getElementById('keyError');
+  if (!key.startsWith('sk-ant-') || key.length < 20) {
+    err.classList.add('visible'); return;
+  }
+  err.classList.remove('visible');
+  localStorage.setItem('validiq_api_key', key);
+  document.getElementById('keyGate').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+}
+
+function changeKey() {
+  localStorage.removeItem('validiq_api_key');
+  document.getElementById('apiKeyInput').value = '';
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('keyGate').style.display = 'flex';
+}
+
+async function submitForm() {
+  if (!isDemoMode && !validateScreen(4)) return;
+
+  document.getElementById('screen4').classList.remove('active');
+  document.getElementById('progressBar').style.display = 'none';
+
+  // Demo mode: skip API call, use pre-baked result
+  if (isDemoMode) {
+    renderOutput(DEMO_RESULT);
+    return;
+  }
+
+  const apiKey = localStorage.getItem('validiq_api_key');
+  if (!apiKey) { changeKey(); return; }
+
+  document.getElementById('screen4').classList.remove('active');
+  document.getElementById('progressBar').style.display = 'none';
+  document.getElementById('loadingScreen').classList.add('active');
+
+  const formData = collectFormData();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: 'Score this discovery package:\n' + JSON.stringify(formData) }]
+      })
+    });
+
+    if (response.status === 401) {
+      document.getElementById('loadingScreen').classList.remove('active');
+      document.getElementById('screen4').classList.add('active');
+      document.getElementById('progressBar').style.display = 'block';
+      showError('err4', 'API key rejected. Please check your key and try again.');
+      changeKey(); return;
+    }
+
+    const data = await response.json();
+    const text = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    renderOutput(result);
+  } catch (err) {
+    document.getElementById('loadingScreen').classList.remove('active');
+    document.getElementById('screen4').classList.add('active');
+    document.getElementById('progressBar').style.display = 'block';
+    showError('err4', 'Something went wrong scoring your package. Please try again.');
+  }
+}
+
+function scoreColor(score) {
+  if (score >= 20) return 'green';
+  if (score >= 12) return 'amber';
+  return 'red';
+}
+
+function ratingClass(rating) {
+  if (rating === 'Ready to Proceed') return 'rating-green';
+  if (rating === 'Conditionally Ready') return 'rating-green';
+  if (rating === 'Proceed with Conditions') return 'rating-amber';
+  return 'rating-red';
+}
+
+function renderOutput(result) {
+  document.getElementById('loadingScreen').classList.remove('active');
+  document.getElementById('outputScreen').classList.add('active');
+
+  document.getElementById('overallScore').textContent = result.overall_score;
+  const badge = document.getElementById('ratingBadge');
+  badge.textContent = result.overall_rating;
+  badge.className = 'rating-badge ' + ratingClass(result.overall_rating);
+
+  const dims = [
+    { key: 'problem_validation', label: 'Problem Validation' },
+    { key: 'value_clarity', label: 'Value Clarity' },
+    { key: 'cost_awareness', label: 'Cost Awareness' },
+    { key: 'stakeholder_readiness', label: 'Stakeholder Readiness' }
+  ];
+
+  const grid = document.getElementById('dimGrid');
+  grid.innerHTML = '';
+
+  dims.forEach(d => {
+    const dim = result.dimension_scores[d.key];
+    const score = dim.score;
+    const color = scoreColor(score);
+    const pct = Math.round((score / 25) * 100);
+
+    const card = document.createElement('div');
+    card.className = 'dim-card';
+    card.innerHTML = `
+      <div class="dim-title">${d.label}</div>
+      <div class="dim-score-row">
+        <span class="dim-score">${score}</span>
+        <span class="dim-denom">/ 25</span>
+        <div class="dim-bar"><div class="dim-bar-fill fill-${color}" style="width:${pct}%"></div></div>
+      </div>
+      <ul class="gap-list">
+        ${dim.gap_statements.map((g, i) => `<li class="${i === 0 && score < 12 ? 'critical' : ''}">${g}</li>`).join('')}
+      </ul>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('verdictText').textContent = result.verdict;
+}
+
+function resetTool() {
+  isDemoMode = false;
+  document.getElementById('demoBanner').style.display = 'none';
+  document.getElementById('headerKeyBtn').style.display = 'block';
+  document.getElementById('outputScreen').classList.remove('active');
+  document.getElementById('progressBar').style.display = 'block';
+  document.getElementById('mainApp').style.display = 'flex';
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.progress-step').forEach(s => {
+    s.classList.remove('active', 'done');
+  });
+
+  document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(i => i.checked = false);
+  document.querySelectorAll('textarea, input[type="text"]').forEach(i => i.value = '');
+  document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+  document.getElementById('reg_detail_group').style.display = 'none';
+  document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('visible'));
+
+  currentScreen = 1;
+  document.getElementById('screen1').classList.add('active');
+  document.getElementById('step1').classList.add('active');
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
